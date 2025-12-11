@@ -5,6 +5,8 @@ import { ThemeProvider } from "./context/ThemeContext";
 import { LanguageProvider } from './context/LanguageContext';
 import { SoundProvider } from './context/SoundContext';
 import AuthProvider from './context/AuthProvider';
+import ScrollProgress from './components/ScrollProgress';
+import PageTransition from './components/PageTransition';
 
 const prompt = Prompt({
   subsets: ["thai", "latin"],
@@ -58,7 +60,10 @@ export default function RootLayout({
           <LanguageProvider>
             <SoundProvider>
               <AuthProvider>
-                {children}
+                <ScrollProgress />
+                <PageTransition>
+                  {children}
+                </PageTransition>
               </AuthProvider>
             </SoundProvider>
           </LanguageProvider>

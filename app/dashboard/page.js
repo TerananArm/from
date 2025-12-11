@@ -38,7 +38,7 @@ const CountUp = ({ end, duration = 2000 }) => {
     return <span>{count.toLocaleString()}</span>;
 };
 
-// StatCard: 🟢 Reference Design (Polished)
+// StatCard: 🟢 Reference Design (Polished) + Premium Effects
 const StatCard = ({ title, count, unit, gradient, icon: Icon, onClick, type, index }) => {
     // Extract color for shadow (approximate mapping based on gradient)
     const shadowColor = gradient.includes('blue') ? 'shadow-blue-500/40' :
@@ -53,13 +53,10 @@ const StatCard = ({ title, count, unit, gradient, icon: Icon, onClick, type, ind
                                         gradient.includes('teal') ? 'shadow-teal-500/40' :
                                             'shadow-pink-500/40';
 
-    // Calculate delay based on index (max 700ms)
-    const delayClass = index < 8 ? `delay-${index * 100}` : 'delay-700';
-
     return (
         <div
             onClick={() => onClick(type, title)}
-            className={`group relative h-44 rounded-3xl p-6 overflow-hidden cursor-pointer transition-all duration-500 hover:scale-[1.03] hover:shadow-2xl ${shadowColor} shadow-lg bg-gradient-to-br ${gradient} animate-slide-up opacity-0 ${delayClass}`}
+            className={`group relative h-44 rounded-3xl p-6 overflow-hidden cursor-pointer transition-all duration-500 hover:scale-[1.03] hover:shadow-2xl ${shadowColor} shadow-lg bg-gradient-to-br ${gradient} ripple magnetic-hover`}
         >
 
             {/* Texture Overlay */}
@@ -84,7 +81,7 @@ const StatCard = ({ title, count, unit, gradient, icon: Icon, onClick, type, ind
             <div className="absolute top-0 right-0 w-40 h-40 bg-white opacity-10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
 
             {/* ✨ Interactive Shine Effect (Refined) */}
-            <div className="absolute top-0 -left-[100%] w-full h-full bg-gradient-to-r from-transparent via-white/25 to-transparent skew-x-12 animate-shine pointer-events-none"></div>
+            <div className="absolute top-0 -left-[100%] w-full h-full bg-gradient-to-r from-transparent via-white/25 to-transparent skew-x-12 group-hover:animate-shine pointer-events-none"></div>
         </div>
     );
 };
@@ -220,11 +217,10 @@ export default function Dashboard() {
         { type: 'schedule', title: t('statSchedule'), count: stats.schedule, unit: t('unitPeriod'), gradient: 'from-blue-700 to-indigo-600', icon: CalendarCheck },
         { type: 'scheduled_subjects', title: t('statScheduledSubjects'), count: stats.scheduled_subjects, unit: t('unitSubject'), gradient: 'from-teal-500 to-cyan-500', icon: Layout },
         { type: 'hours', title: t('statHours'), count: stats.hours, unit: t('unitHour'), gradient: 'from-pink-500 to-rose-400', icon: Clock },
-        // { type: 'logs', title: 'Logs กิจกรรม', count: stats.logs, unit: 'รายการ', gradient: 'from-slate-600 to-slate-800', icon: Shield }, // Logs not in reference image
     ];
 
     return (
-        <div className="max-w-[1600px] mx-auto pb-16">
+        <div className="max-w-[1600px] mx-auto pb-16 page-enter">
 
             <ConfirmModal
                 isOpen={confirmConfig.isOpen}
@@ -237,14 +233,14 @@ export default function Dashboard() {
 
             <div className="space-y-8 animate-fade-in">
                 {/* Banner: 🔴 Reference Red Style (Polished) */}
-                <div className="relative overflow-hidden rounded-3xl p-10 shadow-xl shadow-red-900/20 bg-gradient-to-br from-red-700 via-red-600 to-red-500 text-white flex flex-col md:flex-row justify-between items-center gap-6 group">
+                <div className="relative overflow-hidden rounded-3xl p-10 shadow-xl shadow-red-900/20 bg-gradient-to-br from-red-700 via-red-600 to-red-500 text-white flex flex-col md:flex-row justify-between items-center gap-6 group crystal-shine">
 
                     {/* Texture Overlay */}
                     <div className="absolute inset-0 bg-dot-pattern opacity-10"></div>
 
                     {/* Left: Text */}
                     <div className="z-10">
-                        <h1 className="text-4xl md:text-5xl font-black mb-3 flex items-center gap-4 tracking-tight">
+                        <h1 className="text-4xl md:text-5xl font-black mb-3 flex items-center gap-4 tracking-tight neon-text-red">
                             {t('welcome')}, {userData.name} <span className="animate-wave inline-block origin-[70%_70%] drop-shadow-lg">👋</span>
                         </h1>
                         <p className="text-base md:text-lg opacity-90 font-medium tracking-wide">
@@ -253,7 +249,7 @@ export default function Dashboard() {
                     </div>
 
                     {/* Right: Clock */}
-                    <div className="z-10 bg-white/10 backdrop-blur-md px-8 py-4 rounded-2xl border border-white/20 shadow-lg transition-transform hover:scale-105 hover:bg-white/20">
+                    <div className="z-10 bg-white/10 backdrop-blur-md px-8 py-4 rounded-2xl border border-white/20 shadow-lg transition-transform hover:scale-105 hover:bg-white/20 magnetic-hover">
                         <p className="font-bold text-xl flex items-center gap-3 tracking-wider">
                             <CalendarCheck size={24} className="text-white drop-shadow-sm" />
                             {currentTime}
@@ -264,8 +260,8 @@ export default function Dashboard() {
                     <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-white opacity-5 rounded-full blur-3xl translate-x-1/3 -translate-y-1/3 pointer-events-none animate-float"></div>
                 </div>
 
-                {/* Grid Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* Grid Cards - with stagger effect */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 stagger-children">
                     {cards.filter(c => {
                         if (role === 'admin') return true;
                         if (role === 'teacher') return ['schedule', 'subjects', 'students', 'hours', 'scheduled_subjects'].includes(c.type);

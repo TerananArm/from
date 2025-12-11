@@ -4,8 +4,29 @@ import { useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Sidebar from '../components/Sidebar';
-import Header from '../components/Header'; // ✅ แก้ไขจาก './components/Navbar' เป็น '../components/Header'
+import Header from '../components/Header';
 import { useTheme } from '../context/ThemeContext';
+
+// Floating Particle Component (same as login but subtler)
+const FloatingParticle = ({ delay, duration, size, startX, startY, isDarkMode }) => (
+   <div
+      className={`absolute rounded-full transition-all duration-[2000ms] ${isDarkMode ? 'bg-blue-400/30' : 'bg-white/50'}`}
+      style={{
+         width: size,
+         height: size,
+         left: `${startX}%`,
+         top: `${startY}%`,
+         animation: `floatParticle ${duration}s ease-in-out ${delay}s infinite`,
+      }}
+   />
+);
+
+// Gradient Orb Component (matching login style)
+const GradientOrb = ({ className, isDarkMode }) => (
+   <div
+      className={`absolute rounded-full blur-3xl transition-all duration-[1500ms] ease-in-out ${className} ${isDarkMode ? 'opacity-30' : 'opacity-40'}`}
+   />
+);
 
 function DashboardContent({ children }) {
    const { isSidebarCollapsed, isDarkMode } = useTheme();
@@ -18,6 +39,18 @@ function DashboardContent({ children }) {
          router.replace('/login');
       }
    }, [status, router]);
+
+   // Particles configuration (fewer than login for subtlety)
+   const particles = [
+      { id: 0, delay: 0, duration: 15, size: 6, startX: 15, startY: 25 },
+      { id: 1, delay: 2, duration: 18, size: 5, startX: 75, startY: 20 },
+      { id: 2, delay: 1, duration: 12, size: 8, startX: 30, startY: 65 },
+      { id: 3, delay: 3, duration: 16, size: 4, startX: 55, startY: 45 },
+      { id: 4, delay: 1.5, duration: 14, size: 7, startX: 85, startY: 55 },
+      { id: 5, delay: 2.5, duration: 17, size: 5, startX: 20, startY: 80 },
+      { id: 6, delay: 0.5, duration: 13, size: 6, startX: 65, startY: 35 },
+      { id: 7, delay: 3.5, duration: 15, size: 4, startX: 45, startY: 70 },
+   ];
 
    // Show loading while checking session
    if (status === 'loading') {
@@ -39,56 +72,74 @@ function DashboardContent({ children }) {
    return (
       <div className={`flex h-screen w-full overflow-hidden transition-colors duration-700 ease-in-out ${isDarkMode ? 'bg-[#0f172a]' : 'bg-[#f0f4f8]'}`}>
 
-         {/* ================= BACKGROUND (Premium but Subtle) ================= */}
+         {/* ================= ANIMATED BACKGROUND (Login-style but Subtle) ================= */}
          <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-            {/* พื้นหลังไล่เฉดสีนุ่มๆ */}
+
+            {/* Base Background */}
             <div className={`absolute inset-0 transition-colors duration-1000 ease-linear
-                ${isDarkMode
-                  ? 'bg-[#0D1117]'
-                  : 'bg-[#F5F5F7]'
-               }`}>
+                ${isDarkMode ? 'bg-[#0D1117]' : 'bg-[#F5F5F7]'}`}>
             </div>
 
-            {/* Subtle Grid Pattern */}
-            <div className={`absolute inset-0 opacity-[0.03]
-                ${isDarkMode ? 'bg-grid-dark' : 'bg-grid-light'}`}
+            {/* Morphing Gradient Background */}
+            <div className={`absolute -inset-[100%] z-0 blur-[120px] transition-all duration-[2000ms] ease-in-out ${isDarkMode
+               ? 'opacity-50 bg-[conic-gradient(from_180deg_at_50%_50%,_#1e3a5f_0deg,_#0f172a_90deg,_#312e81_180deg,_#0f172a_270deg,_#1e3a5f_360deg)]'
+               : 'opacity-60 bg-[conic-gradient(from_0deg_at_50%_50%,_#fecaca_0deg,_#bfdbfe_90deg,_#ddd6fe_180deg,_#fef3c7_270deg,_#fecaca_360deg)]'
+               }`}
+               style={{ animation: 'morphGradient 20s ease-in-out infinite' }}
+            />
+
+            {/* Gradient Orbs (subtler than login) */}
+            <GradientOrb
+               isDarkMode={isDarkMode}
+               className={`w-[500px] h-[500px] -top-[150px] -left-[150px] ${isDarkMode
+                  ? 'bg-gradient-to-br from-blue-600/30 to-violet-700/20'
+                  : 'bg-gradient-to-br from-red-200/40 to-rose-300/30'
+                  }`}
+            />
+            <GradientOrb
+               isDarkMode={isDarkMode}
+               className={`w-[400px] h-[400px] -bottom-[100px] -right-[100px] ${isDarkMode
+                  ? 'bg-gradient-to-tl from-purple-700/30 to-indigo-600/20'
+                  : 'bg-gradient-to-tl from-blue-200/40 to-cyan-300/30'
+                  }`}
+            />
+            <GradientOrb
+               isDarkMode={isDarkMode}
+               className={`w-[350px] h-[350px] top-[50%] right-[20%] ${isDarkMode
+                  ? 'bg-gradient-to-r from-emerald-700/20 to-teal-600/15'
+                  : 'bg-gradient-to-r from-amber-100/30 to-orange-200/25'
+                  }`}
+            />
+
+            {/* Floating Particles */}
+            {particles.map((p) => (
+               <FloatingParticle key={p.id} {...p} isDarkMode={isDarkMode} />
+            ))}
+
+            {/* Grid Pattern */}
+            <div className={`absolute inset-0 opacity-[0.03]`}
                style={{
                   backgroundImage: isDarkMode
                      ? 'radial-gradient(circle, rgba(255,255,255,0.15) 1px, transparent 1px)'
                      : 'radial-gradient(circle, rgba(0,0,0,0.08) 1px, transparent 1px)',
-                  backgroundSize: '24px 24px'
+                  backgroundSize: '32px 32px'
                }}
             />
 
-            {/* Blob 1: Reduced opacity for subtlety */}
-            <div className={`absolute -top-[10%] -right-[10%] w-[70vw] h-[70vw] rounded-full blur-[120px] opacity-20 pointer-events-none mix-blend-multiply transition-all duration-[3000ms] transform-gpu animate-drift
-                ${isDarkMode ? 'bg-indigo-900/50' : 'bg-red-100'}`}>
-            </div>
-
-            {/* Blob 2: Softer with slow animation */}
-            <div className={`absolute top-[20%] -left-[10%] w-[50vw] h-[50vw] rounded-full blur-[100px] opacity-15 pointer-events-none mix-blend-multiply transition-all duration-[3500ms] transform-gpu animate-drift-slow
-                ${isDarkMode ? 'bg-blue-900/40' : 'bg-blue-100'}`}>
-            </div>
-
-            {/* Blob 3: Bottom accent, very subtle */}
-            <div className={`absolute bottom-[-10%] right-[20%] w-[60vw] h-[60vw] rounded-full blur-[130px] opacity-10 pointer-events-none mix-blend-multiply transition-all duration-[4000ms] transform-gpu animate-drift-reverse
-                ${isDarkMode ? 'bg-purple-900/30' : 'bg-orange-50'}`}>
-            </div>
-
-            {/* Subtle shimmer overlay - very light */}
-            <div className={`absolute inset-0 opacity-[0.02] pointer-events-none
-                ${isDarkMode ? 'bg-gradient-shimmer-dark' : 'bg-gradient-shimmer-light'}`}
+            {/* Shimmer Effect */}
+            <div
+               className={`absolute inset-0 z-10 transition-opacity duration-[1500ms] ${isDarkMode ? 'opacity-10' : 'opacity-8'}`}
                style={{
-                  backgroundImage: isDarkMode
-                     ? 'linear-gradient(45deg, transparent 40%, rgba(255,255,255,0.03) 50%, transparent 60%)'
-                     : 'linear-gradient(45deg, transparent 40%, rgba(255,255,255,0.5) 50%, transparent 60%)',
-                  backgroundSize: '200% 200%',
-                  animation: 'shimmer 8s ease-in-out infinite'
+                  background: isDarkMode
+                     ? 'linear-gradient(135deg, transparent 0%, transparent 40%, rgba(99,102,241,0.05) 50%, transparent 60%, transparent 100%)'
+                     : 'linear-gradient(135deg, transparent 0%, transparent 40%, rgba(255,255,255,0.15) 50%, transparent 60%, transparent 100%)',
+                  backgroundSize: '400% 400%',
+                  animation: 'shimmer 10s ease-in-out infinite',
                }}
             />
 
-            {/* ✅ Global Blur Overlay - reduced for crispness */}
-            <div className="absolute inset-0 backdrop-blur-2xl"></div>
+            {/* Noise Texture (like login) */}
+            <div className={`absolute inset-0 z-30 mix-blend-overlay transition-opacity duration-[1500ms] ${isDarkMode ? 'opacity-[0.05]' : 'opacity-[0.08]'} bg-[url('https://grainy-gradients.vercel.app/noise.svg')]`} />
          </div>
 
          {/* Sidebar */}
