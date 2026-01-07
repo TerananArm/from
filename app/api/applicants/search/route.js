@@ -71,6 +71,14 @@ export async function GET(request) {
                 photoPath: true,
                 status: true,
                 createdAt: true,
+                // Include boolean flags for checkboxes
+                hasEducationCert: true,
+                hasHouseReg: true,
+                hasIdCard: true,
+                hasAthleteCert: true,
+                hasNameChangeCert: true,
+                hasOtherDocs: true,
+
                 // Include specific counts/booleans for print
                 educationCertCount: true,
                 houseRegCount: true,

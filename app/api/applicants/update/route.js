@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
-import { writeFile } from 'fs/promises';
+import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
+import { v4 as uuidv4 } from 'uuid';
+import { validateFile, sanitizeFilename, FILE_CONFIG } from "@/lib/fileValidation";
 
 const prisma = new PrismaClient();
 
@@ -9,6 +11,12 @@ export async function POST(request) {
     try {
         const formData = await request.formData();
         const id = formData.get('id');
+
+        console.log(`Update request for ID: ${id}`);
+        console.log('FormData keys:', Array.from(formData.keys()));
+        const photoFile = formData.get('photo');
+        if (photoFile) console.log('Photo received:', photoFile.name, photoFile.size, photoFile.type);
+        else console.log('No photo received');
 
         if (!id) {
             return NextResponse.json({ success: false, message: "ID required" }, { status: 400 });
@@ -35,6 +43,41 @@ export async function POST(request) {
             const val = formData.get(name);
             if (val === 'true' || val === 'on') return true;
             if (val === 'false' || val === 'off') return false;
+            return undefined;
+        };
+
+        // Helper to process files
+        const processFile = async (fieldName, prefix, subdir = 'documents') => {
+            const file = formData.get(fieldName);
+            if (file && file instanceof Blob && file.size > 0) {
+                // Validate file
+                const fileValidation = await validateFile(file, {
+                    maxSize: FILE_CONFIG?.MAX_FILE_SIZE || 5 * 1024 * 1024,
+                    allowedExtensions: ['.jpg', '.jpeg', '.png', '.pdf'],
+                    checkMimeType: true
+                });
+
+                if (!fileValidation.valid) {
+                    throw new Error(`ไฟล์ ${fieldName} ไม่ถูกต้อง: ${fileValidation.error}`);
+                }
+
+                const bytes = await file.arrayBuffer();
+                const buffer = Buffer.from(bytes);
+
+                // Sanitize filename
+                const safeFilename = sanitizeFilename(file.name);
+                const filename = `${prefix}-${uuidv4()}${path.extname(safeFilename)}`;
+                const uploadDir = path.join(process.cwd(), "public/uploads", subdir);
+                const filepath = path.join(uploadDir, filename);
+
+                // Ensure directory exists
+                try {
+                    await mkdir(uploadDir, { recursive: true });
+                } catch (e) { /* Directory may already exist */ }
+
+                await writeFile(filepath, buffer);
+                return `/uploads/${subdir}/${filename}`;
+            }
             return undefined;
         };
 
@@ -85,6 +128,7 @@ export async function POST(request) {
         // Education - use schema field names
         if (getVal('currentEducation')) updateData.currentEducation = getVal('currentEducation');
         if (getVal('currentYear')) updateData.educationYear = getVal('currentYear'); // Map form field to schema field
+        // Locked fields - ensure they stay correct if sent, or ignore if not needed (updates usually don't change these)
         if (getVal('schoolName')) updateData.schoolName = getVal('schoolName');
         if (getVal('schoolSubDistrict')) updateData.schoolSubDistrict = getVal('schoolSubDistrict');
         if (getVal('schoolDistrict')) updateData.schoolDistrict = getVal('schoolDistrict');
@@ -111,23 +155,27 @@ export async function POST(request) {
         if (getVal('otherDocDetail')) updateData.otherDocsDesc = getVal('otherDocDetail');
         if (getNum('otherDocCount') !== undefined) updateData.otherDocsCount = getNum('otherDocCount');
 
-        // Handle photo upload if provided
-        const photo = formData.get('photo');
-        if (photo && photo instanceof Blob && photo.size > 0) {
-            try {
-                const bytes = await photo.arrayBuffer();
-                const buffer = Buffer.from(bytes);
-                const fileName = `${Date.now()}-${photo.name}`;
-                const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-                const filePath = path.join(uploadDir, fileName);
-                await writeFile(filePath, buffer);
-                updateData.photoPath = `/uploads/${fileName}`;
-            } catch (fileError) {
-                console.error("File upload error:", fileError);
-            }
-        }
+        // File Uploads
+        const photoPath = await processFile('photo', 'applicant', 'applicants');
+        if (photoPath) updateData.photoPath = photoPath;
 
-        console.log('Update data:', updateData);
+        const educationCertPath = await processFile('educationCertFile', 'educert');
+        if (educationCertPath) updateData.educationCertPath = educationCertPath;
+
+        const houseRegPath = await processFile('houseRegFile', 'housereg');
+        if (houseRegPath) updateData.houseRegPath = houseRegPath;
+
+        const idCardPath = await processFile('idCardFile', 'idcard');
+        if (idCardPath) updateData.idCardPath = idCardPath;
+
+        const athleteCertPath = await processFile('athleteCertFile', 'athletecert');
+        if (athleteCertPath) updateData.athleteCertPath = athleteCertPath;
+
+        const nameChangeCertPath = await processFile('nameChangeFile', 'namechange');
+        if (nameChangeCertPath) updateData.nameChangeCertPath = nameChangeCertPath;
+
+        const otherDocsPath = await processFile('otherDocsFile', 'otherdocs');
+        if (otherDocsPath) updateData.otherDocsPath = otherDocsPath;
 
         if (Object.keys(updateData).length === 0) {
             return NextResponse.json({ success: false, message: "No data to update" }, { status: 400 });

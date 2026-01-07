@@ -46,9 +46,9 @@ export async function POST(request) {
       phone: formData.get("phone"),
       postalCode: formData.get("postalCode"),
       schoolPostalCode: formData.get("schoolPostalCode"),
-      examApplicationNumber: formData.get("examApplicationNumber"),
-      targetSchool: formData.get("targetSchool"),
-      schoolCode: formData.get("schoolCode"),
+      examApplicationNumber: formData.get("examApplicationNumber") || "",
+      targetSchool: formData.get("targetSchool") || "โรงเรียนกีฬาจังหวัดสุพรรณบุรี",
+      schoolCode: formData.get("schoolCode") || "1109",
       race: formData.get("race"),
       nationality: formData.get("nationality"),
       religion: formData.get("religion"),
@@ -126,7 +126,9 @@ export async function POST(request) {
 
     // Extract other fields
     // Header Info
-    data.examApplicationNumber = formData.get("examApplicationNumber");
+    // Convert empty string to null to allow duplicates of "no exam number"
+    const rawExamAppNum = formData.get("examApplicationNumber");
+    data.examApplicationNumber = rawExamAppNum === "" ? null : rawExamAppNum;
     data.targetSchool = formData.get("targetSchool");
     data.schoolCode = formData.get("schoolCode");
 
@@ -208,7 +210,7 @@ export async function POST(request) {
 
         if (!fileValidation.valid) {
           console.warn(`File validation failed for ${fieldName}: ${fileValidation.error}`);
-          return null; // Skip invalid files silently
+          throw new Error(`ไฟล์ ${fieldName} ไม่ถูกต้อง: ${fileValidation.error}`);
         }
 
         const bytes = await file.arrayBuffer();
@@ -237,42 +239,51 @@ export async function POST(request) {
     data.educationCertPath = await processFile("educationCertFile", "educert");
     // If file uploaded, force boolean true
     if (data.educationCertPath) data.hasEducationCert = true;
+    data.educationCertCount = parseIntSafe(formData.get("educationCertCount"));
 
     // House Reg
     data.hasHouseReg = parseBoolean(formData.get("hasHouseReg"));
     data.houseRegPath = await processFile("houseRegFile", "housereg");
     if (data.houseRegPath) data.hasHouseReg = true;
+    data.houseRegCount = parseIntSafe(formData.get("houseRegCount"));
 
     // ID Card
     data.hasIdCard = parseBoolean(formData.get("hasIdCard"));
     data.idCardPath = await processFile("idCardFile", "idcard");
     if (data.idCardPath) data.hasIdCard = true;
+    data.idCardCount = parseIntSafe(formData.get("idCardCount"));
 
     // Athlete Cert
     data.hasAthleteCert = parseBoolean(formData.get("hasAthleteCert"));
     data.athleteCertPath = await processFile("athleteCertFile", "athletecert");
     if (data.athleteCertPath) data.hasAthleteCert = true;
+    data.athleteCertCount = parseIntSafe(formData.get("athleteCertCount"));
 
     // Name Change
     data.hasNameChangeCert = parseBoolean(formData.get("hasNameChange"));
     data.nameChangeCertPath = await processFile("nameChangeFile", "namechange");
     if (data.nameChangeCertPath) data.hasNameChangeCert = true;
+    data.nameChangeCertCount = parseIntSafe(formData.get("nameChangeCertCount"));
 
     // Other Docs
     data.hasOtherDocs = parseBoolean(formData.get("hasOtherDocs"));
     data.otherDocsDesc = formData.get("otherDocsDesc");
     data.otherDocsPath = await processFile("otherDocsFile", "otherdocs");
     if (data.otherDocsPath) data.hasOtherDocs = true;
+    data.otherDocsCount = parseIntSafe(formData.get("otherDocsCount"));
 
     data.photoPath = photoPath;
 
     // Check for Duplicates (Name or ExamApplicationNumber)
+    // Only check examApplicationNumber if it exists (not empty/null)
+    const duplicateChecks = [{ name: data.name }];
+    if (data.examApplicationNumber) {
+      duplicateChecks.push({ examApplicationNumber: data.examApplicationNumber });
+    }
+
     const existingApplicant = await prisma.applicant.findFirst({
       where: {
-        OR: [
-          { name: data.name },
-          { examApplicationNumber: data.examApplicationNumber }
-        ]
+        OR: duplicateChecks
       }
     });
 

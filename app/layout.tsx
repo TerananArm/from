@@ -4,7 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "./context/ThemeContext";
 import { LanguageProvider } from './context/LanguageContext';
 
-import AuthProvider from './context/AuthProvider';
+import AuthProvider from './contextG/AuthProvider';
 
 import PageTransition from './components/PageTransition';
 
@@ -44,8 +44,8 @@ const notoSansKR = Noto_Sans_KR({
 });
 
 export const metadata: Metadata = {
-  title: "EduSched AI - ระบบบริหารการศึกษา",
-  description: "ระบบบริหารจัดการตารางสอนและข้อมูลวิทยาลัย",
+  title: "ระบบรับสมัครนักศึกษาออนไลน์",
+  description: "ระบบรับสมัครนักศึกษาออนไลน์ โรงเรียนกีฬาจังหวัดสุพรรณบุรี",
 };
 
 export default function RootLayout({

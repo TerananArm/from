@@ -254,7 +254,17 @@ export default function ApplicantsPage() {
 
     // Print Application Receipt - Using official form template
     const handlePrint = (app) => {
-        printApplicationForm(app);
+        try {
+            console.log("Printing application for:", app.name);
+            printApplicationForm(app);
+        } catch (error) {
+            console.error("Print failed:", error);
+            Swal.fire({
+                icon: 'error',
+                title: 'เกิดข้อผิดพลาดในการพิมพ์',
+                text: error.message || 'กรุณาลองใหม่อีกครั้ง'
+            });
+        }
     };
 
     return (

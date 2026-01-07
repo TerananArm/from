@@ -25,7 +25,7 @@ export async function middleware(request) {
     };
 
     // Public routes that don't require authentication
-    const publicPaths = ['/login', '/api/auth', '/api/setup', '/api/public'];
+    const publicPaths = ['/login', '/api/auth', '/api/setup', '/api/public', '/api/registration', '/api/applicants/update', '/search', '/api/applicants/search'];
     const isPublicPath = publicPaths.some(path => pathname.startsWith(path));
 
     // Static files and assets don't need auth

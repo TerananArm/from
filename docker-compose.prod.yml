@@ -10,10 +10,15 @@ services:
     ports:
       - "3000:3000"
     env_file:
-      - production.env
+      - docker.env
     environment:
       - NODE_ENV=production
       - DB_HOST=host.docker.internal # Adjust if using a separate db container
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: always
+    volumes:
+      - uploads_data:/app/public/uploads
+
+volumes:
+  uploads_data:
