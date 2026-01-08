@@ -4,7 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "./context/ThemeContext";
 import { LanguageProvider } from './context/LanguageContext';
 
-import AuthProvider from './contextG/AuthProvider';
+import AuthProvider from './context/AuthProvider';
 
 import PageTransition from './components/PageTransition';
 

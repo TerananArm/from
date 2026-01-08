@@ -24,11 +24,9 @@ export async function middleware(request) {
         return response;
     };
 
-    // Public routes that don't require authentication
-    const publicPaths = ['/login', '/api/auth', '/api/setup', '/api/public', '/api/registration', '/api/applicants/update', '/search', '/api/applicants/search'];
-    const isPublicPath = publicPaths.some(path => pathname.startsWith(path));
-
-    // Static files and assets don't need auth
+    // =========================================================
+    // 1. STATIC FILES & ALLOWED EXTENSIONS (No Auth Required)
+    // =========================================================
     if (
         pathname.startsWith('/_next') ||
         pathname.startsWith('/favicon') ||
@@ -37,27 +35,55 @@ export async function middleware(request) {
         return addSecurityHeaders(NextResponse.next());
     }
 
-    // Allow public paths
-    if (isPublicPath) {
+    // =========================================================
+    // 2. CRITICAL PUBLIC API WHITELIST (No Auth Required)
+    // =========================================================
+    // We check using Includes for robustness against sub-paths or query strings
+    const criticalPublicRoutes = [
+        '/api/registration',
+        '/api/applicants/update',
+        '/api/applicants/search',
+        '/api/public',
+        '/api/auth', // NextAuth Routes
+        '/login'      // Login Page
+    ];
+
+    if (criticalPublicRoutes.some(route => pathname.includes(route))) {
         return addSecurityHeaders(NextResponse.next());
     }
+
+    // =========================================================
+    // 3. GENERAL PUBLIC PATHS (No Auth Required)
+    // =========================================================
+    const otherPublicPaths = ['/search', '/api/setup'];
+    // Check startWith for these
+    if (otherPublicPaths.some(path => pathname.startsWith(path))) {
+        return addSecurityHeaders(NextResponse.next());
+    }
+
+    // =========================================================
+    // 4. AUTHENTICATION CHECK
+    // =========================================================
 
     // Use env secret, with fallback for development only
     const secret = process.env.NEXTAUTH_SECRET || (process.env.NODE_ENV === 'development' ? 'dev-secret-key-change-in-production' : undefined);
 
-    // Check for session token
     const token = await getToken({
         req: request,
         secret: secret,
     });
 
-    // Protected routes - ALL DASHBOARD + ALL API (except public)
-    // We default to protecting everything that isn't explicitly public
-    // effectively making it a whitelist approach for public routes
-    const isProtectedPath = pathname.startsWith('/dashboard') ||
+    // Logging for debugging blocked requests (only API)
+    if (!token && pathname.startsWith('/api/')) {
+        console.warn(`[Middleware] Blocking unauthorized API access: ${pathname}`);
+    }
+
+    // List of Protected Paths
+    const isProtectedPath =
+        pathname.startsWith('/dashboard') ||
         pathname.startsWith('/schedule') ||
         pathname.startsWith('/print') ||
-        (pathname.startsWith('/api/') && !isPublicPath);
+        (pathname.startsWith('/api/') && !criticalPublicRoutes.some(route => pathname.includes(route)));
 
     if (isProtectedPath && !token) {
         if (pathname.startsWith('/api/')) {
@@ -81,7 +107,6 @@ export const config = {
     matcher: [
         /*
          * Match all request paths except for the ones starting with:
-         * - api (API routes) - handled separately
          * - _next/static (static files)
          * - _next/image (image optimization files)
          * - favicon.ico (favicon file)
