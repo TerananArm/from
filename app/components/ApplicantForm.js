@@ -99,7 +99,19 @@ export default function ApplicantForm({ onSuccess, editData }) {
                 setVal('name', editData.name);
                 setGender(editData.gender || '');
                 setVal('age', editData.age);
-                setVal('birthdate', editData.birthdate ? editData.birthdate.split('T')[0] : '');
+                if (editData.birthdate) {
+                    const d = new Date(editData.birthdate);
+                    if (!isNaN(d.getTime())) {
+                        const day = String(d.getDate()).padStart(2, '0');
+                        const month = String(d.getMonth() + 1).padStart(2, '0');
+                        const yearBE = d.getFullYear() + 543;
+
+                        setVal('birthDay', day);
+                        setVal('birthMonth', month);
+                        setVal('birthYearBE', yearBE);
+                        setVal('birthdate', `${d.getFullYear()}-${month}-${day}`);
+                    }
+                }
                 setVal('race', editData.race);
                 setVal('nationality', editData.nationality);
                 setVal('religion', editData.religion);
@@ -235,6 +247,9 @@ export default function ApplicantForm({ onSuccess, editData }) {
         setVal('name', `${prefix}${firstName} ${lastName}`);
         setGender(randGender);
         setVal('age', String(age));
+        setVal('birthDay', birthDay);
+        setVal('birthMonth', birthMonth);
+        setVal('birthYearBE', birthYear + 543);
         setVal('birthdate', `${birthYear}-${birthMonth}-${birthDay}`);
         setVal('race', 'ไทย');
         setVal('nationality', 'ไทย');
@@ -506,7 +521,94 @@ export default function ApplicantForm({ onSuccess, editData }) {
                         <FormInput label="อายุ" name="age" type="number" />
                     </div>
                     <div className="md:col-span-4 lg:col-span-4">
-                        <FormInput label="วันเกิด" name="birthdate" type="date" />
+                        {/* Thai Date Input Component */}
+                        <div className="md:col-span-4 lg:col-span-4">
+                            <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">
+                                วันเกิด (โปรดระบุ พ.ศ.) <span className="text-red-500">*</span>
+                            </label>
+                            <div className="flex gap-2">
+                                {/* Day */}
+                                <select
+                                    name="birthDay"
+                                    className="w-20 rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 px-3 py-3 text-slate-800 dark:text-white shadow-sm ring-1 ring-inset ring-slate-200 dark:ring-slate-700 focus:ring-2 focus:ring-rose-500 sm:text-sm"
+                                    onChange={(e) => {
+                                        // Logic to update hidden birthdate field handled via closest form change or native generic handler if needed
+                                        // For now, allow native form submission to pick up individual fields -> We need to construct 'birthdate' manually in handleSubmit
+                                        // OR simpler: Update a hidden input here.
+                                        const form = e.target.closest('form');
+                                        const d = form.querySelector('[name="birthDay"]').value;
+                                        const m = form.querySelector('[name="birthMonth"]').value;
+                                        const y = form.querySelector('[name="birthYearBE"]').value;
+                                        if (d && m && y) {
+                                            const yAD = parseInt(y) - 543;
+                                            form.querySelector('[name="birthdate"]').value = `${yAD}-${m}-${d}`;
+                                        }
+                                    }}
+                                    required
+                                >
+                                    <option value="">วัน</option>
+                                    {[...Array(31)].map((_, i) => (
+                                        <option key={i + 1} value={String(i + 1).padStart(2, '0')}>{i + 1}</option>
+                                    ))}
+                                </select>
+
+                                {/* Month */}
+                                <select
+                                    name="birthMonth"
+                                    className="flex-1 rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 px-3 py-3 text-slate-800 dark:text-white shadow-sm ring-1 ring-inset ring-slate-200 dark:ring-slate-700 focus:ring-2 focus:ring-rose-500 sm:text-sm"
+                                    onChange={(e) => {
+                                        const form = e.target.closest('form');
+                                        const d = form.querySelector('[name="birthDay"]').value;
+                                        const m = form.querySelector('[name="birthMonth"]').value;
+                                        const y = form.querySelector('[name="birthYearBE"]').value;
+                                        if (d && m && y) {
+                                            const yAD = parseInt(y) - 543;
+                                            form.querySelector('[name="birthdate"]').value = `${yAD}-${m}-${d}`;
+                                        }
+                                    }}
+                                    required
+                                >
+                                    <option value="">เดือน</option>
+                                    {[
+                                        'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+                                        'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+                                    ].map((m, i) => (
+                                        <option key={i} value={String(i + 1).padStart(2, '0')}>{m}</option>
+                                    ))}
+                                </select>
+
+                                {/* Year (BE) */}
+                                <input
+                                    type="number"
+                                    name="birthYearBE"
+                                    placeholder="พ.ศ. (เช่น 2555)"
+                                    className="w-32 rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 px-4 py-3 text-slate-800 dark:text-white shadow-sm ring-1 ring-inset ring-slate-200 dark:ring-slate-700 placeholder:text-slate-400 focus:ring-2 focus:ring-rose-500 sm:text-sm"
+                                    onChange={(e) => {
+                                        const form = e.target.closest('form');
+                                        const d = form.querySelector('[name="birthDay"]').value;
+                                        const m = form.querySelector('[name="birthMonth"]').value;
+                                        const y = e.target.value;
+                                        if (d && m && y && y.length === 4) {
+                                            const yAD = parseInt(y) - 543;
+                                            form.querySelector('[name="birthdate"]').value = `${yAD}-${m}-${d}`;
+
+                                            // Auto-calculate Age
+                                            const currentYear = new Date().getFullYear();
+                                            const age = currentYear - yAD;
+                                            if (age >= 0 && age < 100) {
+                                                const ageInput = form.querySelector('[name="age"]');
+                                                if (ageInput) ageInput.value = age;
+                                            }
+                                        }
+                                    }}
+                                    required
+                                    min="2400"
+                                    max="2600"
+                                />
+                                {/* Hidden field for actual submission */}
+                                <input type="hidden" name="birthdate" />
+                            </div>
+                        </div>
                     </div>
                     <div className="md:col-span-4 lg:col-span-3">
                         <FormInput label="เชื้อชาติ" name="race" />

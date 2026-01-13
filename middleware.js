@@ -25,44 +25,52 @@ export async function middleware(request) {
     };
 
     // =========================================================
-    // 1. STATIC FILES & ALLOWED EXTENSIONS (No Auth Required)
+    // STRATEGY: BLACKLIST (Allow All by Default, Block Admin)
     // =========================================================
+
+    // 1. Always Allow Static Files
     if (
         pathname.startsWith('/_next') ||
         pathname.startsWith('/favicon') ||
-        pathname.includes('.') // files with extensions
+        pathname.includes('.')
     ) {
         return addSecurityHeaders(NextResponse.next());
     }
 
-    // =========================================================
-    // 2. CRITICAL PUBLIC API WHITELIST (No Auth Required)
-    // =========================================================
-    // We check using Includes for robustness against sub-paths or query strings
-    const criticalPublicRoutes = [
-        '/api/registration',
-        '/api/applicants/update',
-        '/api/applicants/search',
-        '/api/public',
-        '/api/auth', // NextAuth Routes
-        '/login'      // Login Page
+    // 2. Define What is STRICTLY FORBIDDEN (Admin Only)
+    // These paths require Login. Everything else is Public.
+    const adminPathPrefixes = [
+        '/dashboard',       // Admin UI
+        '/api/dashboard',   // Admin Stats
+        '/api/user',        // User Management
+        '/api/audit',       // Audit Logs
+        '/schedule',        // Schedule Management (Admin)
+        '/print'            // Print Layout (Usually Admin/Staff?) -> IF public needs check, move out. Assuming Admin.
     ];
 
-    if (criticalPublicRoutes.some(route => pathname.includes(route))) {
+    // Check if current path hits a forbidden prefix
+    let isProtected = adminPathPrefixes.some(prefix => pathname.startsWith(prefix));
+
+    // Special Case: /api/applicants
+    // The LIST view (/api/applicants) is Auth Only.
+    // The SEARCH/UPDATE views (/api/applicants/search, ...) are Public.
+    if (pathname.startsWith('/api/applicants')) {
+        const isPublicApplicantRoute =
+            pathname.includes('/search') ||
+            pathname.includes('/update');
+
+        if (!isPublicApplicantRoute) {
+            isProtected = true;
+        }
+    }
+
+    // If it's NOT protected, let it pass (Public by Default!)
+    if (!isProtected) {
         return addSecurityHeaders(NextResponse.next());
     }
 
     // =========================================================
-    // 3. GENERAL PUBLIC PATHS (No Auth Required)
-    // =========================================================
-    const otherPublicPaths = ['/search', '/api/setup'];
-    // Check startWith for these
-    if (otherPublicPaths.some(path => pathname.startsWith(path))) {
-        return addSecurityHeaders(NextResponse.next());
-    }
-
-    // =========================================================
-    // 4. AUTHENTICATION CHECK
+    // 3. AUTHENTICATION CHECK (Only reaches here if Protected)
     // =========================================================
 
     // Use env secret, with fallback for development only
@@ -73,28 +81,19 @@ export async function middleware(request) {
         secret: secret,
     });
 
-    // Logging for debugging blocked requests (only API)
-    if (!token && pathname.startsWith('/api/')) {
-        console.warn(`[Middleware] Blocking unauthorized API access: ${pathname}`);
-    }
-
-    // List of Protected Paths
-    const isProtectedPath =
-        pathname.startsWith('/dashboard') ||
-        pathname.startsWith('/schedule') ||
-        pathname.startsWith('/print') ||
-        (pathname.startsWith('/api/') && !criticalPublicRoutes.some(route => pathname.includes(route)));
-
-    if (isProtectedPath && !token) {
+    if (!token) {
+        // Block API with JSON
         if (pathname.startsWith('/api/')) {
+            console.warn(`[Middleware] Blocking Admin API access: ${pathname}`);
             return addSecurityHeaders(NextResponse.json({ message: 'Unauthorized' }, { status: 401 }));
         }
+        // Redirect Pages to Login
         const loginUrl = new URL('/login', request.url);
         loginUrl.searchParams.set('callbackUrl', pathname);
         return addSecurityHeaders(NextResponse.redirect(loginUrl));
     }
 
-    // If user is logged in and trying to access login page, redirect to dashboard
+    // If logged in but accessing login page, go to dashboard
     if (pathname === '/login' && token) {
         return addSecurityHeaders(NextResponse.redirect(new URL('/dashboard', request.url)));
     }
@@ -102,15 +101,6 @@ export async function middleware(request) {
     return addSecurityHeaders(NextResponse.next());
 }
 
-// Only run middleware on specific routes
 export const config = {
-    matcher: [
-        /*
-         * Match all request paths except for the ones starting with:
-         * - _next/static (static files)
-         * - _next/image (image optimization files)
-         * - favicon.ico (favicon file)
-         */
-        '/((?!_next/static|_next/image|favicon.ico).*)',
-    ],
+    matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 };
