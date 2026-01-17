@@ -41,6 +41,15 @@ const SectionHeader = ({ icon: Icon, title }) => {
     );
 };
 
+const DOCUMENT_LIST = [
+    { label: 'หลักฐานการศึกษา (ปพ.1)', name: 'hasEducationCert', count: 'educationCertCount', file: 'educationCertFile', pathKey: 'educationCertPath' },
+    { label: 'ทะเบียนบ้าน', name: 'hasHouseReg', count: 'houseRegCount', file: 'houseRegFile', pathKey: 'houseRegPath' },
+    { label: 'บัตรประจำตัวประชาชนหรือสูติบัตร', name: 'hasIdCard', count: 'idCardCount', file: 'idCardFile', pathKey: 'idCardPath' },
+    { label: 'เกียรติบัตรแสดงความสามารถทางการกีฬา', name: 'hasAthleteCert', count: 'athleteCertCount', file: 'athleteCertFile', pathKey: 'athleteCertPath' },
+    { label: 'หลักฐานการเปลี่ยนชื่อ - สกุล', name: 'hasNameChange', count: 'nameChangeCount', file: 'nameChangeFile', pathKey: 'nameChangeCertPath' },
+    { label: 'เอกสารประกอบการสมัครอื่นๆ (ระบุ)', name: 'hasOtherDocs', count: 'otherDocsCount', file: 'otherDocsFile', pathKey: 'otherDocsPath', hasDetail: true }
+];
+
 export default function ApplicantForm({ onSuccess, editData }) {
     const formRef = useRef(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -358,6 +367,51 @@ export default function ApplicantForm({ onSuccess, editData }) {
         e.preventDefault();
         setIsSubmitting(true);
 
+        const form = formRef.current;
+        const missingFiles = [];
+
+        DOCUMENT_LIST.forEach(doc => {
+            const checkbox = form.elements[doc.name];
+            if (checkbox && checkbox.checked) {
+                const newFile = selectedFiles[doc.file];
+                const existingFile = editData && editData[doc.pathKey];
+
+                if (!newFile && !existingFile) {
+                    missingFiles.push(doc.label);
+                }
+            }
+        });
+
+        if (missingFiles.length > 0) {
+            Swal.fire({
+                title: "กรุณาแนบไฟล์",
+                html: `<div class="text-left text-slate-600">คุณได้เลือกรายการดังต่อไปนี้แต่ยังไม่ได้แนบไฟล์:<ul class="mt-2 list-disc pl-5">${missingFiles.map(f => `<li>${f}</li>`).join('')}</ul></div>`,
+                icon: "warning",
+                confirmButtonColor: "#f59e0b",
+                confirmButtonText: "ตกลง"
+            });
+            setIsSubmitting(false);
+            return;
+        }
+
+        // Validate Manual State Fields (Gender, Education Level, Photo)
+        const errors = [];
+        if (!gender) errors.push("กรุณาระบุเพศ");
+        if (!educationLevel) errors.push("กรุณาระบุระดับชั้นที่กำลังศึกษา");
+        if (!previewImage) errors.push("กรุณาอัปโหลดรูปถ่ายผู้สมัคร");
+
+        if (errors.length > 0) {
+            Swal.fire({
+                title: "ข้อมูลไม่ครบถ้วน",
+                html: `<div class="text-left text-slate-600">กรุณาระบุข้อมูลต่อไปนี้:<ul class="mt-2 list-disc pl-5">${errors.map(e => `<li>${e}</li>`).join('')}</ul></div>`,
+                icon: "warning",
+                confirmButtonColor: "#f59e0b",
+                confirmButtonText: "ตกลง"
+            });
+            setIsSubmitting(false);
+            return;
+        }
+
         try {
             const formData = new FormData(e.target);
             formData.append('gender', gender);
@@ -483,7 +537,7 @@ export default function ApplicantForm({ onSuccess, editData }) {
                             ) : (
                                 <div className="flex flex-col items-center justify-center h-full text-slate-400 space-y-1">
                                     <Upload size={20} />
-                                    <span className="text-[10px]">รูปถ่าย 1 นิ้ว</span>
+                                    <span className="text-[10px]">รูปถ่าย 1 นิ้ว <span className="text-red-500">*</span></span>
                                 </div>
                             )}
                         </div>
@@ -499,7 +553,7 @@ export default function ApplicantForm({ onSuccess, editData }) {
                         <FormInput label="ชื่อผู้สมัคร (ชื่อ-นามสกุล)" name="name" required />
                     </div>
                     <div className="md:col-span-6 lg:col-span-4">
-                        <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">เพศ</label>
+                        <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">เพศ <span className="text-red-500">*</span></label>
                         <div className="flex gap-4">
                             <button
                                 type="button"
@@ -518,7 +572,7 @@ export default function ApplicantForm({ onSuccess, editData }) {
                         </div>
                     </div>
                     <div className="md:col-span-2 lg:col-span-2">
-                        <FormInput label="อายุ" name="age" type="number" />
+                        <FormInput label="อายุ" name="age" type="number" required />
                     </div>
                     <div className="md:col-span-4 lg:col-span-4">
                         {/* Thai Date Input Component */}
@@ -611,19 +665,19 @@ export default function ApplicantForm({ onSuccess, editData }) {
                         </div>
                     </div>
                     <div className="md:col-span-4 lg:col-span-3">
-                        <FormInput label="เชื้อชาติ" name="race" />
+                        <FormInput label="เชื้อชาติ" name="race" required />
                     </div>
                     <div className="md:col-span-4 lg:col-span-3">
-                        <FormInput label="สัญชาติ" name="nationality" />
+                        <FormInput label="สัญชาติ" name="nationality" required />
                     </div>
                     <div className="md:col-span-4 lg:col-span-3">
-                        <FormInput label="ศาสนา" name="religion" />
+                        <FormInput label="ศาสนา" name="religion" required />
                     </div>
                     <div className="md:col-span-6 lg:col-span-2">
-                        <FormInput label="ส่วนสูง (ซม.)" name="height" type="number" />
+                        <FormInput label="ส่วนสูง (ซม.)" name="height" type="number" required />
                     </div>
                     <div className="md:col-span-6 lg:col-span-2">
-                        <FormInput label="น้ำหนัก (กก.)" name="weight" type="number" />
+                        <FormInput label="น้ำหนัก (กก.)" name="weight" type="number" required />
                     </div>
                 </div>
             </div>
@@ -633,19 +687,19 @@ export default function ApplicantForm({ onSuccess, editData }) {
                 <SectionHeader icon={Activity} title="ข้อมูลบิดา" color="blue" />
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-x-4 gap-y-4">
                     <div className="md:col-span-6 lg:col-span-4">
-                        <FormInput label="บิดาชื่อ - สกุล" name="fatherName" />
+                        <FormInput label="บิดาชื่อ - สกุล" name="fatherName" required />
                     </div>
                     <div className="md:col-span-6 lg:col-span-4">
-                        <FormInput label="อาชีพ" name="fatherOccupation" />
+                        <FormInput label="อาชีพ" name="fatherOccupation" required />
                     </div>
                     <div className="md:col-span-4 lg:col-span-3">
-                        <FormInput label="เชื้อชาติ" name="fatherRace" />
+                        <FormInput label="เชื้อชาติ" name="fatherRace" required />
                     </div>
                     <div className="md:col-span-4 lg:col-span-3">
-                        <FormInput label="สัญชาติ" name="fatherNationality" />
+                        <FormInput label="สัญชาติ" name="fatherNationality" required />
                     </div>
                     <div className="md:col-span-4 lg:col-span-3">
-                        <FormInput label="ศาสนา" name="fatherReligion" />
+                        <FormInput label="ศาสนา" name="fatherReligion" required />
                     </div>
                     <div className="md:col-span-12 border-t border-slate-100 dark:border-slate-800 pt-3 mt-2">
                         <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">ประวัติทางกีฬา</label>
@@ -663,19 +717,19 @@ export default function ApplicantForm({ onSuccess, editData }) {
                 <SectionHeader icon={Activity} title="ข้อมูลมารดา" color="pink" />
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-x-4 gap-y-4">
                     <div className="md:col-span-6 lg:col-span-4">
-                        <FormInput label="มารดาชื่อ - สกุล" name="motherName" />
+                        <FormInput label="มารดาชื่อ - สกุล" name="motherName" required />
                     </div>
                     <div className="md:col-span-6 lg:col-span-4">
-                        <FormInput label="อาชีพ" name="motherOccupation" />
+                        <FormInput label="อาชีพ" name="motherOccupation" required />
                     </div>
                     <div className="md:col-span-4 lg:col-span-3">
-                        <FormInput label="เชื้อชาติ" name="motherRace" />
+                        <FormInput label="เชื้อชาติ" name="motherRace" required />
                     </div>
                     <div className="md:col-span-4 lg:col-span-3">
-                        <FormInput label="สัญชาติ" name="motherNationality" />
+                        <FormInput label="สัญชาติ" name="motherNationality" required />
                     </div>
                     <div className="md:col-span-4 lg:col-span-3">
-                        <FormInput label="ศาสนา" name="motherReligion" />
+                        <FormInput label="ศาสนา" name="motherReligion" required />
                     </div>
                     <div className="md:col-span-12 border-t border-slate-100 dark:border-slate-800 pt-3 mt-2">
                         <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">ประวัติทางกีฬา</label>
@@ -692,15 +746,15 @@ export default function ApplicantForm({ onSuccess, editData }) {
             <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-lg border border-slate-200 dark:border-slate-800 p-6 md:p-8">
                 <SectionHeader icon={MapPin} title="ที่อยู่ที่ติดต่อได้สะดวก" color="green" />
                 <div className="grid grid-cols-2 lg:grid-cols-12 gap-4">
-                    <div className="col-span-1 lg:col-span-2"><FormInput label="บ้านเลขที่" name="address" /></div>
-                    <div className="col-span-1 lg:col-span-2"><FormInput label="หมู่ที่" name="village" /></div>
-                    <div className="col-span-2 lg:col-span-4"><FormInput label="ถนน" name="road" /></div>
-                    <div className="col-span-2 lg:col-span-4"><FormInput label="ตำบล" name="subDistrict" /></div>
-                    <div className="col-span-2 lg:col-span-4"><FormInput label="อำเภอ" name="district" /></div>
-                    <div className="col-span-2 lg:col-span-4"><FormInput label="จังหวัด" name="province" /></div>
+                    <div className="col-span-1 lg:col-span-2"><FormInput label="บ้านเลขที่" name="address" required /></div>
+                    <div className="col-span-1 lg:col-span-2"><FormInput label="หมู่ที่" name="village" required /></div>
+                    <div className="col-span-2 lg:col-span-4"><FormInput label="ถนน" name="road" required /></div>
+                    <div className="col-span-2 lg:col-span-4"><FormInput label="ตำบล" name="subDistrict" required /></div>
+                    <div className="col-span-2 lg:col-span-4"><FormInput label="อำเภอ" name="district" required /></div>
+                    <div className="col-span-2 lg:col-span-4"><FormInput label="จังหวัด" name="province" required /></div>
                     <div className="col-span-2 lg:col-span-4 flex gap-4">
-                        <FormInput label="รหัสไปรษณีย์" name="postalCode" className="flex-1" />
-                        <FormInput label="โทรศัพท์" name="phone" className="flex-1" />
+                        <FormInput label="รหัสไปรษณีย์" name="postalCode" className="flex-1" required />
+                        <FormInput label="โทรศัพท์" name="phone" className="flex-1" required />
                     </div>
                 </div>
             </div>
@@ -710,7 +764,7 @@ export default function ApplicantForm({ onSuccess, editData }) {
                 <SectionHeader icon={Award} title={`สถานภาพทางการศึกษาในปีการศึกษา ${new Date().getFullYear() + 543}`} color="orange" />
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-x-4 gap-y-4">
                     <div className="md:col-span-12 space-y-2">
-                        <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">กำลังศึกษาในชั้น</label>
+                        <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">กำลังศึกษาในชั้น <span className="text-red-500">*</span></label>
                         <div className="flex gap-4">
                             <button
                                 type="button"
@@ -730,29 +784,29 @@ export default function ApplicantForm({ onSuccess, editData }) {
                     </div>
 
                     <div className="md:col-span-3 lg:col-span-2">
-                        <FormInput label="ปีที่" name="currentYear" />
+                        <FormInput label="ปีที่" name="currentYear" required />
                     </div>
                     <div className="md:col-span-9 lg:col-span-10">
-                        <FormInput label="โรงเรียน" name="schoolName" />
+                        <FormInput label="โรงเรียน" name="schoolName" required />
                     </div>
 
                     <div className="md:col-span-6 lg:col-span-3">
-                        <FormInput label="ตำบล" name="schoolSubDistrict" />
+                        <FormInput label="ตำบล" name="schoolSubDistrict" required />
                     </div>
                     <div className="md:col-span-6 lg:col-span-3">
-                        <FormInput label="อำเภอ" name="schoolDistrict" />
+                        <FormInput label="อำเภอ" name="schoolDistrict" required />
                     </div>
                     <div className="md:col-span-6 lg:col-span-3">
-                        <FormInput label="จังหวัด" name="schoolProvince" />
+                        <FormInput label="จังหวัด" name="schoolProvince" required />
                     </div>
                     <div className="md:col-span-6 lg:col-span-3">
-                        <FormInput label="รหัสไปรษณีย์" name="schoolPostalCode" />
+                        <FormInput label="รหัสไปรษณีย์" name="schoolPostalCode" required />
                     </div>
 
                     <div className="md:col-span-12 border-t border-slate-100 pt-3 mt-2">
                         <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                            <div className="md:col-span-12 lg:col-span-5"><FormInput label="สมัครเข้าศึกษาต่อในชั้น" name="appliedLevel" /></div>
-                            <div className="md:col-span-8 lg:col-span-5"><FormInput label="ชนิดกีฬา" name="sportType" /></div>
+                            <div className="md:col-span-12 lg:col-span-5"><FormInput label="สมัครเข้าศึกษาต่อในชั้น" name="appliedLevel" required /></div>
+                            <div className="md:col-span-8 lg:col-span-5"><FormInput label="ชนิดกีฬา" name="sportType" required /></div>
                             <div className="md:col-span-4 lg:col-span-2"><FormInput label="รหัส" name="sportCode" disabled={true} placeholder="เจ้าหน้าที่ระบุ" /></div>
                         </div>
                     </div>
@@ -765,14 +819,7 @@ export default function ApplicantForm({ onSuccess, editData }) {
             <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-lg border border-slate-200 dark:border-slate-800 p-6 md:p-8">
                 <SectionHeader icon={FileText} title="หลักฐานการสมัคร" />
                 <div className="space-y-4">
-                    {[
-                        { label: 'หลักฐานการศึกษา (ปพ.1)', name: 'hasEducationCert', count: 'educationCertCount', file: 'educationCertFile', pathKey: 'educationCertPath' },
-                        { label: 'ทะเบียนบ้าน', name: 'hasHouseReg', count: 'houseRegCount', file: 'houseRegFile', pathKey: 'houseRegPath' },
-                        { label: 'บัตรประจำตัวประชาชนหรือสูติบัตร', name: 'hasIdCard', count: 'idCardCount', file: 'idCardFile', pathKey: 'idCardPath' },
-                        { label: 'เกียรติบัตรแสดงความสามารถทางการกีฬา', name: 'hasAthleteCert', count: 'athleteCertCount', file: 'athleteCertFile', pathKey: 'athleteCertPath' },
-                        { label: 'หลักฐานการเปลี่ยนชื่อ - สกุล', name: 'hasNameChange', count: 'nameChangeCount', file: 'nameChangeFile', pathKey: 'nameChangeCertPath' },
-                        { label: 'เอกสารประกอบการสมัครอื่นๆ (ระบุ)', name: 'hasOtherDocs', count: 'otherDocsCount', file: 'otherDocsFile', pathKey: 'otherDocsPath', hasDetail: true }
-                    ].map((item, idx) => (
+                    {DOCUMENT_LIST.map((item, idx) => (
                         <div key={idx} className="bg-slate-50/50 dark:bg-slate-800/30 rounded-2xl p-4 md:p-5 border border-slate-100 dark:border-slate-800 transition-all hover:border-rose-100 dark:hover:border-rose-900/30 hover:shadow-sm">
                             <div className="flex flex-col md:flex-row md:items-start gap-4 md:gap-6">
                                 {/* Checkbox & Label */}
