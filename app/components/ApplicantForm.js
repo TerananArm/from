@@ -42,9 +42,9 @@ const SectionHeader = ({ icon: Icon, title }) => {
 };
 
 const DOCUMENT_LIST = [
-    { label: 'หลักฐานการศึกษา (ปพ.1)', name: 'hasEducationCert', count: 'educationCertCount', file: 'educationCertFile', pathKey: 'educationCertPath' },
-    { label: 'ทะเบียนบ้าน', name: 'hasHouseReg', count: 'houseRegCount', file: 'houseRegFile', pathKey: 'houseRegPath' },
-    { label: 'บัตรประจำตัวประชาชนหรือสูติบัตร', name: 'hasIdCard', count: 'idCardCount', file: 'idCardFile', pathKey: 'idCardPath' },
+    { label: 'หลักฐานการศึกษา (ปพ.1)', name: 'hasEducationCert', count: 'educationCertCount', file: 'educationCertFile', pathKey: 'educationCertPath', required: true },
+    { label: 'ทะเบียนบ้าน', name: 'hasHouseReg', count: 'houseRegCount', file: 'houseRegFile', pathKey: 'houseRegPath', required: true },
+    { label: 'บัตรประจำตัวประชาชนหรือสูติบัตร', name: 'hasIdCard', count: 'idCardCount', file: 'idCardFile', pathKey: 'idCardPath', required: true },
     { label: 'เกียรติบัตรแสดงความสามารถทางการกีฬา', name: 'hasAthleteCert', count: 'athleteCertCount', file: 'athleteCertFile', pathKey: 'athleteCertPath' },
     { label: 'หลักฐานการเปลี่ยนชื่อ - สกุล', name: 'hasNameChange', count: 'nameChangeCount', file: 'nameChangeFile', pathKey: 'nameChangeCertPath' },
     { label: 'เอกสารประกอบการสมัครอื่นๆ (ระบุ)', name: 'hasOtherDocs', count: 'otherDocsCount', file: 'otherDocsFile', pathKey: 'otherDocsPath', hasDetail: true }
@@ -372,7 +372,8 @@ export default function ApplicantForm({ onSuccess, editData }) {
 
         DOCUMENT_LIST.forEach(doc => {
             const checkbox = form.elements[doc.name];
-            if (checkbox && checkbox.checked) {
+            // Required if: marked as required in list OR checkbox is checked
+            if (doc.required || (checkbox && checkbox.checked)) {
                 const newFile = selectedFiles[doc.file];
                 const existingFile = editData && editData[doc.pathKey];
 
@@ -645,14 +646,6 @@ export default function ApplicantForm({ onSuccess, editData }) {
                                         if (d && m && y && y.length === 4) {
                                             const yAD = parseInt(y) - 543;
                                             form.querySelector('[name="birthdate"]').value = `${yAD}-${m}-${d}`;
-
-                                            // Auto-calculate Age
-                                            const currentYear = new Date().getFullYear();
-                                            const age = currentYear - yAD;
-                                            if (age >= 0 && age < 100) {
-                                                const ageInput = form.querySelector('[name="age"]');
-                                                if (ageInput) ageInput.value = age;
-                                            }
                                         }
                                     }}
                                     required
@@ -828,13 +821,19 @@ export default function ApplicantForm({ onSuccess, editData }) {
                                         <input
                                             type="checkbox"
                                             name={item.name}
-                                            defaultChecked={editData ? editData[item.name] : false}
-                                            className="w-5 h-5 text-rose-600 rounded-md border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-rose-500 focus:ring-offset-0 cursor-pointer"
+                                            defaultChecked={item.required || (editData ? editData[item.name] : false)}
+                                            disabled={item.required}
+                                            className={`w-5 h-5 text-rose-600 rounded-md border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-rose-500 focus:ring-offset-0 ${item.required ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                                         />
+                                        {/* If disabled, sending a hidden input to ensure value is submitted might be needed for native forms, 
+                                            but since we use FormData(e.target) directly, disabled inputs might not send.
+                                            However, our logic relies on 'checked' or 'doc.required'. 
+                                            For backend/editData consistency, let's include a hidden input if required. */}
+                                        {item.required && <input type="hidden" name={item.name} value="on" />}
                                     </div>
                                     <div className="space-y-2 w-full">
                                         <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 leading-snug">
-                                            {item.label}
+                                            {item.label} {item.required && <span className="text-red-500">*</span>}
                                         </label>
                                         {item.hasDetail && (
                                             <input
